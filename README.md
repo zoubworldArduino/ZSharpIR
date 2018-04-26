@@ -74,8 +74,31 @@ Using MS Excel, we can calculate function (For distance > 10cm) :
 
 Distance = 29.988 X POW(Volt , -1.173)
 
+## GP2D12_24
+###   Model: "1081" [10cm to 80cm]
+
+|  Volt | Distance |
+| ----- | -------- |
+| 2.534 | 10       |
+| 1.391 | 20       |
+| 0.952 | 30       |
+| 0.727 | 40       |
+| 0.581 | 50       |
+| 0.493 | 60       |
+| 0.483 | 70       |
+                               
+                               
+                               
+                               
+                               
+Based on   https://mycurvefit.com/ :
+ 
+Distance = 24.65251/(Volt-0.1065759)
+ 
 ## GP2Y0A710K0F
 ### Model: "100500" [100cm to 500cm]
+
+
 
 Based on the SHARP datasheet we can calculate the linear function: 
 `y = 137500x + 1125` 

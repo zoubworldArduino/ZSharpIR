@@ -78,21 +78,7 @@ int ZSharpIR::distance() {
           distanceMM =(int)( 277.28 * pow(map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.2045));
 
 
-    } 
-    
-    
-    /*
-       V                    cm
-       2.534                10        
-       1.391                20        
-       0.952                30        
-       0.727                40        
-       0.581                50        
-       0.493                60        
-       0.483                70        
-    https://mycurvefit.com/:
-    y = 24.65251/(x-0.1065759)
-    */
+    }   
     else if (_model==GP2D12_24)//GP2D12_24
 		{
         
