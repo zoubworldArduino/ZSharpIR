@@ -112,3 +112,9 @@ which gives us:
 Based on the SHARP datasheet we can calculate the function (For distance > 3cm) :
 
 Distance = 12.08 X POW(Volt , -1.058)
+
+
+# history of version :
+1.0.0 : release
+	used for Eurobot 2018
+1.1.0 : release that add ROS as an option.

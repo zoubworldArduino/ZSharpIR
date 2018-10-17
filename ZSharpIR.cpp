@@ -2,7 +2,12 @@
 	ZSharpIR
 
 	Arduino library for retrieving distance (in mm) from the analog GP2Y0A21Y and GP2Y0A02YK,...
-
+	Author :
+	Pierre Valleau
+	history :
+		add ros supports
+		add several model support.
+		
     Original comment from Dr. Marcal Casas-Cartagena :
 	inspired from :
 	- https://github.com/qub1750ul/Arduino_SharpIR.git
@@ -16,7 +21,7 @@
 */
 
 
-#include "Arduino.h"
+#include "Arduino.h"//<=should be included here #include "WMath.h"
 #include "WMath.h"
 #include "ZSharpIR.h"
 
@@ -127,7 +132,65 @@ int ZSharpIR::distance() {
     return distanceMM;
 }
 
+/** return the max valid value of captor
+*/
+int ZSharpIR::getMax() 
+{
+	 if (_model==1080)//GP2Y0A21YK0F
+	{        
+       return 800;
+    }   
+    else if (_model==GP2D12_24)//GP2D12_24
+		{        
+        return 800;
+    }       
+    else if (_model==20150)//GP2Y0A02YK0F
+	{
 
+       return 150;
+
+
+    } else if (_model==430)//GP2Y0A41SK0F
+	{
+
+       return 300;
+
+        
+    } else if (_model==100500)//GP2Y0A710K0F
+	{
+		return 5000;
+	}
+	
+}
+/** return the min valid value of captor
+*/
+int ZSharpIR::getMin() 
+{
+	 if (_model==1080)//GP2Y0A21YK0F
+	{        
+       return 100;
+    }   
+    else if (_model==GP2D12_24)//GP2D12_24
+		{        
+        return 100;
+    }       
+    else if (_model==20150)//GP2Y0A02YK0F
+	{
+
+       return 200;
+
+
+    } else if (_model==430)//GP2Y0A41SK0F
+	{
+
+       return 40;
+
+        
+    } else if (_model==100500)//GP2Y0A710K0F
+	{
+		return 1000;
+	}
+}
 
 
 /// <summary>
@@ -147,3 +210,43 @@ void ZSharpIR::SetAnalogReadResolution(int res)
 	_Adcres=res;
 	analogReadResolution( res);
 }
+
+
+#ifdef ROS_USED 
+// ROS SECTION :
+//char frameid[] = "/ir_ranger";
+/** setup :
+  At setup after NodeHandle setup, call this to initialise the topic
+*/
+void ZSharpIR::setup( ros::NodeHandle * myNodeHandle,	const char   *	topic )
+{
+  nh=myNodeHandle;
+  pub_range=new ros::Publisher( topic, &range_msg);
+  nh->advertise(*pub_range);
+  
+  range_msg.radiation_type = sensor_msgs::Range::INFRARED;
+//  range_msg.header.frame_id =  frameid;
+  range_msg.field_of_view = 10;
+  range_msg.min_range = ((float)getMin())/1000.0 ;  // For GP2D120XJ00F only. Adjust for other IR rangers
+  range_msg.max_range = ((float)getMax())/1000.0 ;   // For GP2D120XJ00F only. Adjust for other IR rangers
+  
+  range_msg.header.stamp = nh->now();
+}
+#define toNSec( t ) ((uint32_t)t.sec*1000000000ull + (uint32_t)t.nsec)
+/** loop :
+  on loop  before NodeHandle refresh(spinOnce), call this to update the topic
+*/
+void ZSharpIR::loop()
+{
+	ros::Time now=nh->now();
+
+  // publish the range value every 50 milliseconds
+  //   since it takes that long for the sensor to stabilize
+  if ( (toNSec( now ) ) > (50000000LL+toNSec( (range_msg.header.stamp) ))){
+    range_msg.range = ((float)distance())/1000.0;
+    range_msg.header.stamp = now;
+    pub_range->publish(&range_msg);
+  } 
+}
+#endif 
+

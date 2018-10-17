@@ -15,9 +15,14 @@
 #define SharpIR_h
 
 #define NB_SAMPLE 10
+#define  ROS_USED 
 
 #include "Arduino.h"
-
+#ifdef ROS_USED 
+#include <ros.h>
+#include <ros/time.h>
+#include <sensor_msgs/Range.h>
+#endif 
 
 //#include <sensor_msgs/Range.h>
 
@@ -35,13 +40,24 @@ class ZSharpIR
 	static const uint32_t GP2Y0A02YK0F = 20150 ;
 	static const uint32_t GP2Y0A710K0F = 100500 ;
 	
+    int getMax();
+    int getMin() ;
 
-     void setARefVoltage(int refV);
-     void SetAnalogReadResolution(int res);
-     
+    void setARefVoltage(int refV);
+    void SetAnalogReadResolution(int res);
+	
+#ifdef ROS_USED 
+    void setup( ros::NodeHandle  *myNodeHandle,	const char   *	topic);
+	void loop();
+#endif 
   private:
-     int    _Adcres;
-     int _refVoltage;
+#ifdef ROS_USED 
+    ros::NodeHandle  *nh;
+    sensor_msgs::Range range_msg;
+    ros::Publisher *pub_range;
+#endif
+    int    _Adcres;
+    int _refVoltage;
      
     void sort(int a[], int size);
     
