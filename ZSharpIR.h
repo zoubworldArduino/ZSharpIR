@@ -18,6 +18,7 @@
 #define  ROS_USED 
 
 #include "Arduino.h"
+#include <assert.h>
 #ifdef ROS_USED 
 #include <ros.h>
 #include <ros/time.h>
