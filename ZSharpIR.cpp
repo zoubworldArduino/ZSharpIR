@@ -22,7 +22,7 @@
 
 
 #include "Arduino.h"//<=should be included here #include "WMath.h"
-#include "WMath.h"
+
 #include "ZSharpIR.h"
 
 // Initialisation function
@@ -42,7 +42,13 @@ ZSharpIR::ZSharpIR(int irPin, const uint32_t  sensorModel) {
     _Adcres=10;
 	_refVoltage=5000;
 }
+/** the calibration table of 20 value,
+1st is for 0cm
+next is for 10cm, naxt for 20,.... up to 190cm
+you can store it after calibration procedure, or restore it after power up.
 
+*/
+int  table[20];
 // Sort an array
 void ZSharpIR::sort(int a[], int size) {
     for(int i=0; i<(size-1); i++) {
@@ -58,29 +64,39 @@ void ZSharpIR::sort(int a[], int size) {
         if (flag) break;
     }
 }
-
-// Read distance and compute it
-int ZSharpIR::distance() {
-
-    int ir_val[NB_SAMPLE];
-    int distanceMM;
-    float current;
-
-
-    for (int i=0; i<NB_SAMPLE; i++){
+int ZSharpIR::getRaw()
+{
+	 int ir_val[NB_SAMPLE];
+	  for (int i=0; i<NB_SAMPLE; i++){
         // Read analog value
         ir_val[i] = analogRead(_irPin);
     }
     
     // Sort it 
     sort(ir_val,NB_SAMPLE);
+	
+	return ir_val[NB_SAMPLE / 2];
+	
+} 
 
-    
+// Read distance and compute it
+int ZSharpIR::distance() {
+
+   
+   
+
+
+   int ir_val=getRaw();
+   return compute( ir_val) ;
+}
+int ZSharpIR::compute(int ir_val) { 
+ int distanceMM=0;
+    float current=0;
     if (_model==1080)//GP2Y0A21YK0F
 		{
         
         // Different expressions required as the Photon has 12 bit ADCs vs 10 bit for Arduinos
-          distanceMM =(int)( 277.28 * pow(map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.2045));
+          distanceMM =(int)( 277.28 * pow(map(ir_val, 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.2045));
 
 
     }   
@@ -88,7 +104,7 @@ int ZSharpIR::distance() {
 		{
         
         // Different expressions required as the Photon has 12 bit ADCs vs 10 bit for Arduinos
-          distanceMM =(int)( 24.65251 /(map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0-0.1065759));
+          distanceMM =(int)( 24.65251 /(map(ir_val, 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0-0.1065759));
 
     } 
     
@@ -101,21 +117,21 @@ int ZSharpIR::distance() {
         // puntualDistance=61.573*pow(voltFromRaw/1000, -1.1068);
         
         // Different expressions required as the Photon has 12 bit ADCs vs 10 bit for Arduinos
-          distanceMM =(int)( 603.74 * pow(map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.16));
+          distanceMM =(int)( 603.74 * pow(map(ir_val, 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.16));
 
 
     } else if (_model==430)//GP2Y0A41SK0F
 	{
 
         // Different expressions required as the Photon has 12 bit ADCs vs 10 bit for Arduinos
-          distanceMM =(int)( 120.8 * pow(map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.058));
+          distanceMM =(int)( 120.8 * pow(map(ir_val, 0, (1<<_Adcres)-1, 0, _refVoltage)/1000.0, -1.058));
 
         
     } else if (_model==100500)//GP2Y0A710K0F
 	{
         
 
-          current = map(ir_val[NB_SAMPLE / 2], 0, (1<<_Adcres)-1, 0, _refVoltage);
+          current = map(ir_val, 0, (1<<_Adcres)-1, 0, _refVoltage);
 
         // use the inverse number of distance like in the datasheet (1/L)
         // y = mx + b = 137500*x + 1125 
@@ -128,10 +144,27 @@ int ZSharpIR::distance() {
           distanceMM =(int)( 10.0 / (((current - 1125.0) / 1000.0) / 137.5));
         }
     }
-
+ else if (_model==CALIBRATED)//GP2Y0A710K0F
+	{
+		int index=0;
+        for( index=19;index>=0 && ir_val>table[index];index--);
+          distanceMM = map(ir_val, table[index], table[index+1], index*10, index*10+10);
+    }
     return distanceMM;
 }
+/** Return the possible error 
+(based on a noise/error of 5 LSB of ADC measure)
+this inaccuracy isn't lineare so this function can be interesting.
+so realvalue=distance() +/-getAccuracy().
 
+*/
+int ZSharpIR::getAccuracy() 
+{
+	
+	 int ir_val=getRaw();
+   return abs( compute( ir_val+5)-compute( ir_val)) ;
+	 
+}
 /** return the max valid value of captor
 */
 int ZSharpIR::getMax() 
@@ -160,7 +193,21 @@ int ZSharpIR::getMax()
 	{
 		return 5000;
 	}
+	else if (_model==CALIBRATED)//GP2Y0A710K0F
+	{
+		
+		int previous=32767;
+		int dmax=0;
+		 for(int  index=19;index>=getMin()/10;index--)
+		 {
+		 if (table[index]<=previous)
+			 dmax=index*10;
+		 previous=table[index];
+		 }
+		return dmax;
+	}
 	
+	return -1;
 }
 /** return the min valid value of captor
 */
@@ -190,6 +237,24 @@ int ZSharpIR::getMin()
 	{
 		return 1000;
 	}
+	else if (_model==CALIBRATED)//GP2Y0A710K0F
+	{
+		
+		int previous=0;
+		int dmax=0;
+		 for(int  index=0;index<20 ;index++)		 
+		 if (table[index]>=previous)
+		 {
+			 dmax=index*10;
+		 previous=table[index];
+		 }
+		 else
+		return dmax;
+	
+	}
+	
+		return -1;
+	
 }
 
 
@@ -208,8 +273,51 @@ void ZSharpIR::SetAnalogReadResolution(int res)
 {
 
 	_Adcres=res;
+	#ifndef ARDUINO_ARCH_AVR
 	analogReadResolution( res);
+	#endif
 }
+int indexZsharpIR=0;
+void ZSharpIR::ApplyCalibration(int atable[20])
+{
+	 for(int  index=0;index<20 ;index++)	
+		 table[index]=atable[index];
+	 _model=CALIBRATED;
+}
+void ZSharpIR::DisplayCalibration(Stream & Serial)
+{
+   Serial.println("int tableXXX[]={");
+    for(int index=0;index<20;index++)
+    {
+    
+   Serial.print("\t\t  ");  // returns it to the serial monitor
+  
+  Serial.print(table[index]);
+if (index<19)
+    Serial.println(","); 
+      }
+       Serial.println("\t\t};"); 
+}
+/** call this function to calibrate the captor
+after call 20 times CalibrateNextStep() moving a captor from 0cm to 190cm by step of 10cm from the obstacle.
+calibrate oonly 1 captor at a time.
+*/
+void ZSharpIR::CalibrateStart()
+{
+	indexZsharpIR=0;
+}
+void ZSharpIR::CalibrateNextStep()
+{
+	if (indexZsharpIR<20)
+	{
+table[indexZsharpIR]=getRaw();
+indexZsharpIR++;
+	}
+	else
+		_model=CALIBRATED;
+}
+ 
+ 
 
 
 #ifdef ROS_USED 
@@ -223,7 +331,9 @@ void ZSharpIR::setup( ros::NodeHandle * myNodeHandle,	const char   *	topic )
   nh=myNodeHandle;
   pub_range=new ros::Publisher( topic, &range_msg);
   assert( pub_range!=0);// heap issue.
-  nh->advertise(*pub_range);
+  
+  bool result=nh->advertise(*pub_range);
+  assert(result);
   
   range_msg.radiation_type = sensor_msgs::Range::INFRARED;
 //  range_msg.header.frame_id =  frameid;
@@ -246,7 +356,9 @@ void ZSharpIR::loop()
   if ( (toNSec( now ) ) > (50000000LL+toNSec( (range_msg.header.stamp) ))){
     range_msg.range = ((float)distance())/1000.0;
     range_msg.header.stamp = now;
-    pub_range->publish(&range_msg);
+    
+                    signed int result=pub_range->publish(&range_msg);
+           assert(result>0);
   } 
 }
 #endif 

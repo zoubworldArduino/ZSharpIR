@@ -1,13 +1,13 @@
-#include <SharpIR.h>
+#include <ZSharpIR.h>
 
 #define ir A0
-#define model 20150
+#define model ZSharpIR::GP2D12_24
 // ir: the pin where your sensor is attached
 // model: an int that determines your sensor:  1080 for GP2Y0A21Y
 //                                            20150 for GP2Y0A02Y
 //                                            (working distance range according to the datasheets)
 
-SharpIR SharpIR(ir, model);
+ZSharpIR ZSharpIR(ir, model);
 
 void setup() {
   // put your setup code here, to run once:
@@ -23,7 +23,9 @@ void loop() {
 
 
   Serial.print("Mean distance: ");  // returns it to the serial monitor
-  Serial.println(dis);
+  Serial.print(dis);
+   Serial.print(" ; ");  // returns it to the serial monitor
+  
   
   unsigned long pepe2=millis()-pepe1;  // the following gives you the time taken to get the measurement
   Serial.print("Time taken (ms): ");
