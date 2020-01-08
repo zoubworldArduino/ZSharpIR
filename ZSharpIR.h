@@ -42,6 +42,7 @@ class ZSharpIR
 	static const uint32_t GP2Y0A21YK0F = 1080 ;
 	static const uint32_t GP2D12_24 = 1081 ;
 	static const uint32_t GP2Y0A02YK0F = 20150 ;
+	static const uint32_t GP2Y0A02 = 20150 ;
 	static const uint32_t GP2Y0A710K0F = 100500 ;
 	static const uint32_t CALIBRATED = -1 ;
 	
